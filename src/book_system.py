@@ -11,6 +11,11 @@ from selenium.common.exceptions import UnexpectedAlertPresentException
 
 from optparse import OptionParser
 import time
+
+from mail import mail
+
+send_to = ['']
+
 #from pyvirtualdisplay import Display# fireforx in ubuntu
 
 def moveAndClick(elem) :
@@ -21,6 +26,8 @@ def moveAndClick(elem) :
 sessions = ['1']
 days = ['1','2','3','4'] # 1 = Sun, 2 = Mon, 3 = Tue, 4 = Wed, 5 = Thu, 6 = Fri, 7 = Sat
 url = "https://www.bbdc.sg/bbweb/default.aspx"
+
+
 
 class auto_book(object):
     driver  = None;
@@ -83,10 +90,10 @@ class auto_book(object):
             print "no slot"
             elem_back = self.driver.find_element_by_xpath("//input[@value='<< Back']")
             elem_back.click()
-            return -1
+            return 'no book'
         except UnexpectedAlertPresentException:
             print "a undefine error"
-            return -1
+            return 'no book'
         except TimeoutException:
             #find place:
             for index in range(len(elem_slots)):
@@ -100,12 +107,14 @@ class auto_book(object):
             #confirm
             time.sleep(1)
             driver.find_element_by_xpath("//input[@type='submit'][@value='Confirm']").click()
+            sessionInfo = driver.find_elements_by_xpath("//td[@class='txt']")
+            msg_sessionInfo = ''
+            for element in sessionInfo :
+                msg_sessionInfo = msg_sessionInfo + element.text + '\n''
+            print msg_sessionInfo
             driver.find_element_by_xpath("//input[@name='btnBooking'][@value='New Booking']").click()
-            return 0
-
-
-
-
+            return msg_sessionInfo
+        
 
 
 if __name__ == '__main__':
@@ -113,7 +122,7 @@ if __name__ == '__main__':
     parser = OptionParser(usage="usage: %prog --user --pwd --mail --mpwd --num --mon", version="%prog "+VERSION)
     parser.add_option("--user", action="store", dest="username", help='web username')
     parser.add_option("--pwd", action="store", dest="password", help="web password")
-    parser.add_option("--mail", action="store", dest="send_mail", help='mail address')
+    parser.add_option("--mail", action="store", dest="send_mail", help='gmail address')
     parser.add_option("--mpwd", action="store", dest="mail_password", help='mail password')
     parser.add_option("--num", action="store", dest="booking_num", type = "int",help='booking numbers')
     parser.add_option("--mon", action="store", dest="months", help='booking months')
@@ -134,8 +143,10 @@ if __name__ == '__main__':
     while 1:
         try:
             new_book.search_book(options)
-            if new_book.Check_result(options) == 0:
+            result = new_book.Check_result(options)
+            if result != 'no book':
                 time.sleep(2)
+                mail.send_mail(send_mail,mail_password,send_to,'new booking',result)
                 new_book.slot_set(options)
             else:
                 time.sleep(2)
